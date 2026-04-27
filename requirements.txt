@@ -1,0 +1,31 @@
+# Tested: Python 3.10 on Intel Mac (CPU-only) and Colab T4 (CUDA 12.1).
+# Notes:
+#   - Intel-Mac wheels for torch only go up to 2.2.2.
+#   - On Colab, install torch from PyPI (CUDA wheels) instead of pinning here.
+#   - dgl is OPTIONAL: only the load_arxiv* DGL trainer needs it; we can stick
+#     to the PyG trainer (core.GNNs.gnn_trainer) and skip dgl entirely.
+
+# core
+torch==2.2.2
+numpy<2
+scipy
+pandas
+scikit-learn
+tqdm
+pyyaml
+
+# graph
+torch_geometric>=2.5,<2.8
+ogb>=1.3.6
+
+# language model side (DeBERTa interpreter, BERT/SBERT baselines)
+transformers>=4.40,<4.50
+accelerate>=0.30
+sentence-transformers>=2.7
+
+# config + experiment plumbing
+yacs
+
+# LLM-explanation generation (pick whichever you use; both are tiny)
+openai>=1.30        # if generating explanations via OpenAI API
+# llama-cpp-python  # uncomment for fully local Llama

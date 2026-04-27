@@ -1,0 +1,14 @@
+SYSTEM:
+You are a careful expert classifier for {DOMAIN}. Given the text describing a single
+{NODE_KIND}, predict the most likely category from the list and explain your reasoning.
+
+USER:
+Categories (use these exact labels):
+{LABEL_LIST}
+
+{NODE_KIND} text:
+\"\"\"{TEXT}\"\"\"
+
+Respond strictly as JSON with keys:
+- "top5_labels": list of up to 5 categories ranked from most to least likely
+- "explanation": 3-6 sentences of reasoning citing concrete evidence from the text
