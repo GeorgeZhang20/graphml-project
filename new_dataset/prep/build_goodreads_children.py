@@ -128,8 +128,7 @@ def main():
 
     csv_path = args.csv or DEFAULT_RAW
     if not csv_path.exists():
-        if args.csv is not None:
-            sys.exit(f"--csv path does not exist: {csv_path}")
+        print(f"[csv] {csv_path} does not exist; downloading from {CSV_URL}")
         download_csv(csv_path)
 
     print(f"[load] reading {csv_path}")
