@@ -39,6 +39,20 @@ def load_data(dataset, use_dgl=False, use_text=False, use_gpt=False, seed=0):
     elif dataset == 'arxiv_2023':
         from core.data_utils.load_arxiv_2023 import get_raw_text_arxiv_2023 as get_raw_text
         num_classes = 40
+    elif dataset == 'goodreads_children':
+        from core.data_utils.load_goodreads_children import get_raw_text_goodreads_children as get_raw_text
+        # discovered at build time; we read it from labels.txt to avoid drift
+        from pathlib import Path
+        _labels_path = None
+        for _p in [Path(__file__).resolve().parents[3] / "new_dataset" / "data" / "goodreads_children" / "labels.txt",
+                   Path("new_dataset") / "data" / "goodreads_children" / "labels.txt"]:
+            if _p.exists():
+                _labels_path = _p
+                break
+        if _labels_path is None:
+            exit("goodreads_children labels.txt not found; run build_goodreads_children.py first")
+        with open(_labels_path) as _f:
+            num_classes = sum(1 for _line in _f if _line.strip())
     else:
         exit(f'Error: Dataset {dataset} not supported')
 

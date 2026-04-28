@@ -335,12 +335,13 @@ bash scripts/04_ablations.sh       goodreads_children
 > Mapped to the experiment IDs in §6 and §7. Each person's contribution must be
 > summarized in the final report under "Author Contributions" (course requirement).
 
-| Person      | Workstream                  | Owns                                                                                              | Experiments | Backs up |
-|-------------|-----------------------------|---------------------------------------------------------------------------------------------------|-------------|----------|
-| **George**  | Infra & GNN training        | Phase 0 env, scripts/, ogbn-arxiv replication, GNN training across all features, results tables   | E1, E2, E4, A1, A6 | Haoran   |
-| **Haoran**  | Dataset construction        | `new_dataset/prep/build_<DATASET>.py`, splits, `TAPE/core/data_utils/load_<DATASET>.py`, registry edit, frozen-LM baseline | E3, A5 | George   |
-| **Yiwen**   | LLM pipeline                | `llm_explanations/generate.py`, prompt design, all per-node LLM calls, caching, JSON formatting   | A2, A3, A4         | Haoran   |
-| **all**     | Writeup                     | Report writing, plotting, error analysis on misclassified nodes                                   | —           | —        |
+| Person      | Owns (code + data)                                                                                                                                                                  | Experiments | Backs up |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|----------|
+| **George**  | E2 + all of E2's prerequisites: Goodreads build (`new_dataset/prep/build_goodreads_children.py`), `load_goodreads_children.py`, registry edit, `llm_explanations/generate.py`, both DeBERTa fine-tunes (TA + E × 4 seeds on Colab Pro), the 5 × 2 × 4 GNN sweep, results aggregation, plots | **E2**      | Haoran   |
+| **Haoran**  | ogbn-arxiv replication harness, downloading the authors' cached `gpt_responses` + `.emb` checkpoints, running E1, plus the drop-one ensemble ablation (A1) on Goodreads once George's TA/E features are written | E1, A1      | George   |
+| **Yiwen**   | Prompt-template ablation infra (a thin variant on `generate.py`), top-k sweep for `P` (re-runs `core.trainGNN` with topk ∈ {1, 3, 5}), low-label regime experiment (subsetting `train_mask`)                       | A2, A6      | Haoran   |
+| **unassigned** | A3 (prompt template), A4 (Llama backend), A5 (frozen-LM), E3 (frozen-DeBERTa baseline), E4 (Cora sanity) — pick up if a phase finishes early; drop if not                                                                      | —           | —        |
+| **all**     | Final report writing, error analysis on misclassified nodes                                                                                                                          | —           | —        |
 
 Suggested initial assignment based on workstream coverage; swap if anyone
 prefers a different fit. The "Backs up" column kicks in if a teammate is

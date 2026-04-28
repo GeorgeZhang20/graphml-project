@@ -1,7 +1,10 @@
 
-import dgl
 import torch
 from torch.utils.data import Dataset as TorchDataset
+
+# dgl is OPTIONAL — only needed for the RevGAT (DGL) trainer path. Importing
+# lazily so non-DGL code (PyG GCN/SAGE/MLP, the LM trainer, our new dataset
+# loaders) works without dgl installed.
 
 # convert PyG dataset to DGL dataset
 
@@ -15,7 +18,7 @@ class CustomDGLDataset(TorchDataset):
         return 1
 
     def __getitem__(self, idx):
-
+        import dgl  # lazy: only fails when the DGL path is actually exercised
         data = self.pyg_data
         g = dgl.DGLGraph()
         if self.name == 'ogbn-arxiv' or self.name == 'ogbn-products':
