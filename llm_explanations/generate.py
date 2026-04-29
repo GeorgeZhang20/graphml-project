@@ -294,21 +294,42 @@ def main():
                       f"(cached={n_cached}, fresh={n_fresh}, failed={n_failed}) "
                       f"rate={rate:.1f}/s  elapsed={elapsed:.0f}s")
 
-    # Rebuild full CSV from disk (covers prior runs too):
-    print(f"[csv] rebuilding {preds_csv} from on-disk JSONs ...")
-    with open(preds_csv, "w", newline="") as f:
-        w = csv.writer(f)
-        for i in range(n):
+    # Skip the CSV rebuild for --dry_run; nothing useful is being verified by it.
+    if args.dry_run:
+        print(f"[csv] skipping CSV rebuild for --dry_run")
+    else:
+        # Rebuild full CSV from disk (covers prior runs too).
+        # IMPORTANT: on Drive FUSE, sequential reads of N JSONs are very slow
+        # (~50-100ms/file metadata RPC). For 76k JSONs that's an hour. We
+        # parallelize the per-file reads with a thread pool (Drive RPCs are
+        # I/O-bound, GIL is fine here). We also reuse `top_k_per_node` for
+        # nodes processed in this session so we don't reread their JSONs.
+        print(f"[csv] rebuilding {preds_csv} from on-disk JSONs (parallel reads)...")
+
+        def _read_top(i: int):
+            if i in top_k_per_node:
+                return i, top_k_per_node[i]
             jpath = responses_dir / f"{i}.json"
             if jpath.exists():
                 with open(jpath) as jf:
                     resp = json.load(jf)
-                top = parse_top_k_ids(resp, label_to_idx, args.top_k)
-            else:
-                # missing node: emit a placeholder row of zeros so row count = N
-                top = list(range(args.top_k))
-            w.writerow(top)
-    print(f"[csv] wrote {preds_csv} ({n} rows)")
+                return i, parse_top_k_ids(resp, label_to_idx, args.top_k)
+            return i, list(range(args.top_k))  # placeholder for missing nodes
+
+        rows = [None] * n
+        # 32 workers is fine for I/O-bound Drive FUSE; bump higher if Drive is the bottleneck.
+        with ThreadPoolExecutor(max_workers=32) as pool:
+            t_csv = time.time()
+            for k, (i, top) in enumerate(pool.map(_read_top, range(n))):
+                rows[i] = top
+                if (k + 1) % 5000 == 0:
+                    elapsed = time.time() - t_csv
+                    print(f"  [csv] {k + 1}/{n} read  elapsed={elapsed:.0f}s")
+        with open(preds_csv, "w", newline="") as f:
+            w = csv.writer(f)
+            for r in rows:
+                w.writerow(r)
+        print(f"[csv] wrote {preds_csv} ({n} rows)")
 
     if n_failed:
         print(f"[done] WITH FAILURES: {n_failed} nodes failed; re-run to retry "
