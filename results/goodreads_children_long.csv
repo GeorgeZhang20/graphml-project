@@ -1,0 +1,16 @@
+dataset,seed,feature,gnn,val_acc,test_acc,wall_seconds,returncode
+goodreads_children,0,E,GCN,0.5869,0.5864,22.47398853302002,0
+goodreads_children,0,E,MLP,0.5912,0.5905,7.999302625656128,0
+goodreads_children,0,E,SAGE,0.6059,0.6058,28.2245934009552,0
+goodreads_children,0,P,GCN,0.5629,0.559,24.111815452575684,0
+goodreads_children,0,P,MLP,0.4976,0.4923,9.075437784194946,0
+goodreads_children,0,P,SAGE,0.5476,0.5451,25.82313632965088,0
+goodreads_children,0,TA,GCN,0.5905,0.5915,22.438905715942383,0
+goodreads_children,0,TA,MLP,0.6169,0.6167,7.938932418823242,0
+goodreads_children,0,TA_P_E,GCN,0.5988,0.5975,57.600712060928345,0
+goodreads_children,0,TA_P_E,MLP,0.6178,0.6202,14.334043741226196,0
+goodreads_children,0,TA_P_E,SAGE,0.6326,0.6346,70.46613883972168,0
+goodreads_children,0,TA,SAGE,0.6212,0.6212,26.588260412216187,0
+goodreads_children,0,ogb,GCN,0.5193,0.5203,16.267422437667847,0
+goodreads_children,0,ogb,MLP,0.4583,0.4595,8.432159185409546,0
+goodreads_children,0,ogb,SAGE,0.5199,0.5222,17.34885549545288,0
