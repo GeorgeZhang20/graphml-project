@@ -85,6 +85,20 @@ class LMTrainer():
         eval_steps = self.eval_patience // eq_batch_size
         warmup_steps = int(self.warmup_epochs * train_steps)
 
+        # Mixed precision policy:
+        #   - bf16 on Ampere+ (A100, L4, RTX 30/40, H100): same memory savings as
+        #     fp16 but ~8 exponent bits → no GradScaler overflow.
+        #   - fp32 elsewhere (T4, V100): safest fallback. We'd rather take the
+        #     ~30% slowdown than have a 0/400 step crash.
+        # The original code used fp16=True unconditionally, which crashes at
+        # step 0 on some Trainer/GradScaler combinations with `value cannot be
+        # converted to type at::Half without overflow`.
+        bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        use_fp16 = False
+        use_bf16 = bool(bf16_ok)
+        print(f"[lm_trainer] mixed precision: bf16={use_bf16}, fp16={use_fp16}, "
+              f"device={'cuda:0' if torch.cuda.is_available() else 'cpu'}")
+
         # Define Trainer
         args = TrainingArguments(
             output_dir=self.output_dir,
@@ -103,7 +117,8 @@ class LMTrainer():
             warmup_steps=warmup_steps,
             num_train_epochs=self.epochs,
             dataloader_num_workers=1,
-            fp16=True,
+            fp16=use_fp16,
+            bf16=use_bf16,
             dataloader_drop_last=True,
         )
         self.trainer = Trainer(
@@ -135,6 +150,9 @@ class LMTrainer():
         inf_model = BertClaInfModel(
             self.model, emb, pred, feat_shrink=self.feat_shrink)
         inf_model.eval()
+        # Same fp16 → bf16 swap for inference. The .emb/.pred memmaps are
+        # written as np.float16 regardless (truncation, not overflow).
+        bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
         inference_args = TrainingArguments(
             output_dir=self.output_dir,
             do_train=False,
@@ -142,7 +160,8 @@ class LMTrainer():
             per_device_eval_batch_size=self.batch_size*8,
             dataloader_drop_last=False,
             dataloader_num_workers=1,
-            fp16_full_eval=True,
+            fp16_full_eval=False,
+            bf16_full_eval=bool(bf16_ok),
         )
 
         trainer = Trainer(model=inf_model, args=inference_args)
