@@ -1,5 +1,6 @@
 from core.GNNs.gnn_trainer import GNNTrainer
-from core.GNNs.dgl_gnn_trainer import DGLGNNTrainer
+# DGL trainer is imported lazily — it pulls in `dgl` (optional dep), so we only
+# import it when RevGAT is selected.
 import pandas as pd
 from core.config import cfg, update_cfg
 import time
@@ -9,6 +10,7 @@ def run(cfg):
     seeds = [cfg.seed] if cfg.seed is not None else range(cfg.runs)
 
     if cfg.gnn.model.name == 'RevGAT':
+        from core.GNNs.dgl_gnn_trainer import DGLGNNTrainer
         TRAINER = DGLGNNTrainer
     else:
         TRAINER = GNNTrainer

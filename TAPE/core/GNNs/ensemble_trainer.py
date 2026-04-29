@@ -1,7 +1,8 @@
 import torch
 
 from core.GNNs.gnn_trainer import GNNTrainer
-from core.GNNs.dgl_gnn_trainer import DGLGNNTrainer
+# DGL trainer is imported lazily inside __init__ when RevGAT is selected;
+# importing it eagerly pulls in `dgl` (optional dep) and breaks PyG-only setups.
 from core.data_utils.load import load_data
 
 LOG_FREQ = 10
@@ -37,6 +38,7 @@ class EnsembleTrainer():
         )["acc"]
 
         if cfg.gnn.model.name == 'RevGAT':
+            from core.GNNs.dgl_gnn_trainer import DGLGNNTrainer
             self.TRAINER = DGLGNNTrainer
         else:
             self.TRAINER = GNNTrainer
