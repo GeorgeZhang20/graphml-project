@@ -1,10 +1,10 @@
 """Render E2 figures from results/<DATASET>_long.csv.
 
 Produces under results/figures/:
-  <DATASET>_heatmap.{png,pdf}    feature x GNN, cells = mean test acc + std
-  <DATASET>_bars.{png,pdf}       grouped bars, seed-error bars
-  <DATASET>_scatter.{png,pdf}    one dot per seed (variance shown honestly)
-  <DATASET>_lift.{png,pdf}       per-feature delta vs `ogb` baseline (the H2 picture)
+  <DATASET>_heatmap.png    feature x GNN, cells = mean test acc + std
+  <DATASET>_bars.png       grouped bars, seed-error bars
+  <DATASET>_scatter.png    one dot per seed (variance shown honestly)
+  <DATASET>_lift.png       per-feature delta vs `ogb` baseline (the H2 picture)
 
 Same logic as notebooks/plots.ipynb, headless so the auto-push cell can call it.
 
@@ -76,8 +76,7 @@ def main():
     ax.set_title(f"E2: test acc on {args.dataset}  (n={n_seeds} seed{'s' if n_seeds != 1 else ''})")
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="test acc")
     plt.tight_layout()
-    for ext in ("png", "pdf"):
-        plt.savefig(fig_dir / f"{args.dataset}_heatmap.{ext}", dpi=200, bbox_inches="tight")
+    plt.savefig(fig_dir / f"{args.dataset}_heatmap.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
     # ---------- 2. grouped bars ----------
@@ -95,8 +94,7 @@ def main():
     ax.legend(title="GNN")
     ax.grid(axis="y", alpha=0.3)
     plt.tight_layout()
-    for ext in ("png", "pdf"):
-        plt.savefig(fig_dir / f"{args.dataset}_bars.{ext}", dpi=200, bbox_inches="tight")
+    plt.savefig(fig_dir / f"{args.dataset}_bars.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
     # ---------- 3. per-seed scatter ----------
@@ -117,8 +115,7 @@ def main():
     axes[0].set_ylabel("test accuracy")
     fig.suptitle(f"E2 per-seed scatter ({args.dataset})")
     plt.tight_layout()
-    for ext in ("png", "pdf"):
-        plt.savefig(fig_dir / f"{args.dataset}_scatter.{ext}", dpi=200, bbox_inches="tight")
+    plt.savefig(fig_dir / f"{args.dataset}_scatter.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
     # ---------- 4. lift vs ogb (the H2 picture) ----------
@@ -138,8 +135,7 @@ def main():
         ax.legend(title="GNN")
         ax.grid(axis="y", alpha=0.3)
         plt.tight_layout()
-        for ext in ("png", "pdf"):
-            plt.savefig(fig_dir / f"{args.dataset}_lift.{ext}", dpi=200, bbox_inches="tight")
+        plt.savefig(fig_dir / f"{args.dataset}_lift.png", dpi=200, bbox_inches="tight")
         plt.close(fig)
     else:
         print("[plot] no `ogb` row in long.csv; skipping lift plot")
