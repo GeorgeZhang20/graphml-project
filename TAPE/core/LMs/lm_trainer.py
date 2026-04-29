@@ -85,18 +85,20 @@ class LMTrainer():
         eval_steps = self.eval_patience // eq_batch_size
         warmup_steps = int(self.warmup_epochs * train_steps)
 
-        # Mixed precision policy:
-        #   - bf16 on Ampere+ (A100, L4, RTX 30/40, H100): same memory savings as
-        #     fp16 but ~8 exponent bits → no GradScaler overflow.
-        #   - fp32 elsewhere (T4, V100): safest fallback. We'd rather take the
-        #     ~30% slowdown than have a 0/400 step crash.
-        # The original code used fp16=True unconditionally, which crashes at
-        # step 0 on some Trainer/GradScaler combinations with `value cannot be
-        # converted to type at::Half without overflow`.
-        bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        # Mixed precision policy: DISABLED on purpose for DeBERTa.
+        #
+        # DeBERTa-v1's modeling code in transformers does:
+        #     attention_scores.masked_fill(~mask, torch.finfo(query_layer.dtype).min)
+        # which crashes in BOTH fp16 ("at::Half overflow", finfo.min ~ -65504)
+        # AND bf16 ("at::BFloat16 overflow", finfo.min ~ -3.39e38). It's a known
+        # transformers issue with DeBERTa, not specific to our code or any GPU.
+        # See: https://github.com/huggingface/transformers/issues/27170
+        # fp32 has plenty of headroom; the speed cost is acceptable since we're
+        # only fine-tuning twice per seed.
         use_fp16 = False
-        use_bf16 = bool(bf16_ok)
-        print(f"[lm_trainer] mixed precision: bf16={use_bf16}, fp16={use_fp16}, "
+        use_bf16 = False
+        print(f"[lm_trainer] mixed precision: bf16={use_bf16}, fp16={use_fp16} "
+              f"(disabled for DeBERTa stability), "
               f"device={'cuda:0' if torch.cuda.is_available() else 'cpu'}")
 
         # Define Trainer
@@ -150,9 +152,10 @@ class LMTrainer():
         inf_model = BertClaInfModel(
             self.model, emb, pred, feat_shrink=self.feat_shrink)
         inf_model.eval()
-        # Same fp16 → bf16 swap for inference. The .emb/.pred memmaps are
-        # written as np.float16 regardless (truncation, not overflow).
-        bf16_ok = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        # Inference also runs in fp32 for the same DeBERTa overflow reason
+        # (see comment in train()). The .emb/.pred memmaps still get truncated
+        # to np.float16 on write, since DeBERTa's *outputs* are well within
+        # fp16 range — only the attention mask sentinel is the problem.
         inference_args = TrainingArguments(
             output_dir=self.output_dir,
             do_train=False,
@@ -161,7 +164,7 @@ class LMTrainer():
             dataloader_drop_last=False,
             dataloader_num_workers=1,
             fp16_full_eval=False,
-            bf16_full_eval=bool(bf16_ok),
+            bf16_full_eval=False,
         )
 
         trainer = Trainer(model=inf_model, args=inference_args)
