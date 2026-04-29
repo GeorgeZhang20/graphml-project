@@ -39,18 +39,22 @@ def load_data(dataset, use_dgl=False, use_text=False, use_gpt=False, seed=0):
     elif dataset == 'arxiv_2023':
         from core.data_utils.load_arxiv_2023 import get_raw_text_arxiv_2023 as get_raw_text
         num_classes = 40
-    elif dataset == 'goodreads_children':
-        from core.data_utils.load_goodreads_children import get_raw_text_goodreads_children as get_raw_text
-        # discovered at build time; we read it from labels.txt to avoid drift
+    elif dataset == 'goodreads_children' or dataset.startswith('goodreads_children_n'):
+        # `goodreads_children_n<NUM>` is the subsample slug; same loader, different dir.
+        from functools import partial
+        from core.data_utils.load_goodreads_children import get_raw_text_goodreads_children
+        get_raw_text = partial(get_raw_text_goodreads_children, dataset=dataset)
+        # num_classes is read from labels.txt (which always lists the FULL label
+        # space even on subsamples — see build_goodreads_children.py)
         from pathlib import Path
         _labels_path = None
-        for _p in [Path(__file__).resolve().parents[3] / "new_dataset" / "data" / "goodreads_children" / "labels.txt",
-                   Path("new_dataset") / "data" / "goodreads_children" / "labels.txt"]:
+        for _p in [Path(__file__).resolve().parents[3] / "new_dataset" / "data" / dataset / "labels.txt",
+                   Path("new_dataset") / "data" / dataset / "labels.txt"]:
             if _p.exists():
                 _labels_path = _p
                 break
         if _labels_path is None:
-            exit("goodreads_children labels.txt not found; run build_goodreads_children.py first")
+            exit(f"{dataset}/labels.txt not found; run build_goodreads_children.py first")
         with open(_labels_path) as _f:
             num_classes = sum(1 for _line in _f if _line.strip())
     else:
