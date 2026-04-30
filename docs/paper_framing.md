@@ -15,22 +15,24 @@ Authors: George, Haoran, Yiwen.
 
 ## Section skeleton
 
-| § | Title | Pages | Primary claim | Supporting evidence | Status |
-|---|---|---|---|---|---|
-| 1 | Introduction | ~1.0 | Motivates TAGs + LLM-as-feature; states C1/C2/C3 up front | — | ❌ writing |
-| 2 | Related work | ~0.75 | Position vs TAPE / GLEM / GIANT / GraphAdapter / CS-TAG | citations only | ❌ writing |
-| 3 | Method | ~1.0 | We faithfully reproduce TAPE pipeline modulo 3 documented changes (gpt-4o-mini, fp32, no RevGAT) | Figure 12 (pipeline diagram); Goodreads schema table | ❌ writing |
-| 4.1 | Replication on ogbn-arxiv | ~0.5 | Our pipeline reproduces TAPE's headline ogbn-arxiv number within ±1% | Table 1 | 🟡 Haoran (E1) |
-| 4.2 | Goodreads-Children matrix | ~1.5 | **C1**: TAPE > shallow by 8-16 pp · **C2**: TA > E across 3 GNNs · **C3**: TAPE − TA = 0.4-1.3 pp | Table 2; Fig 2, Fig 6, Fig 8 | ✅ n=1; 🟡 n=4 |
-| 4.3 | Cross-dataset comparison | ~0.75 | H3 reversal is a *dataset effect*, not a *GNN effect* | Fig 1, Fig 4, Fig 5, Fig 7 | ✅ paper data + n=1 ours |
-| 4.4 | Drop-one ablation | ~0.5 | Removing E from `TA_P_E` costs less than removing TA on Goodreads (clinches C2) | Table 3, Fig 9 | ❌ Haoran (A1) |
-| 4.5 | Frozen-LM controls (E3 + A5) | ~0.5 | Isolates "fine-tune contribution" from "LM encoder contribution" — supports C3 | Table 2 extra rows + Fig 13 | ❌ George (E3+A5) |
-| 4.6 | Low-label regime | ~0.5 | TAPE's lift over `ogb` *grows* as labels shrink (or doesn't) — practical takeaway | Table 5, Fig 14 | ❌ Yiwen (A6) |
-| 4.7 *(optional)* | Top-k for `P` | ~0.25 | `P` ablation is robust to k ∈ {1, 3, 5} — secondary | Table 4 | ❌ Yiwen (A2) |
-| 5 | Discussion | ~1.5 | Why TA wins on Goodreads (§5.1); why graph adds little (§5.2 — C4); practitioner takeaways (§5.3) | qualitative spot-check of explanations + lift table from §4 | ❌ writing |
-| 6 | Limitations | ~0.5 | One dataset, one LLM, fp32, no RevGAT, n=4 seeds | — | ❌ writing |
-| 7 | Conclusion | ~0.25 | Restate C1/C2/C3; future work (Amazon-Books, Reddit-TAG) | — | ❌ writing |
-| 8 | Author contributions | ~0.1 | Per-person breakdown (course requirement) | — | ❌ writing |
+| § | Title | Pages | Primary claim | Experiment(s) | Owner | Figs / Tables | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | Introduction | ~1.0 | Motivates TAGs + LLM-as-feature; states C1/C2/C3 up front | — | all | — | ❌ writing |
+| 2 | Related work | ~0.75 | Position vs TAPE / GLEM / GIANT / GraphAdapter / CS-TAG | — | Haoran | citations | ❌ writing |
+| 3 | Method | ~1.0 | We faithfully reproduce TAPE pipeline modulo 3 documented changes (gpt-4o-mini, fp32, no RevGAT) | — | George | Fig 12 + dataset schema table | ❌ writing |
+| 4.1 | Replication on ogbn-arxiv | ~0.5 | Our pipeline reproduces TAPE's headline ogbn-arxiv number within ±1% | **E1** | Haoran | Table 1 | ❌ E1 + writing |
+| 4.2 | Goodreads-Children matrix | ~1.5 | **C1**: TAPE > shallow by 8-16 pp · **C2**: TA > E across 3 GNNs · **C3**: TAPE − TA = 0.4-1.3 pp | **E2** | George | Table 2; Fig 2, Fig 6, Fig 8 | ✅ n=1; 🟡 n=4 |
+| 4.3 | Cross-dataset comparison | ~0.75 | H3 reversal is a *dataset effect*, not a *GNN effect* | E2 + paper Table 3 | George | Fig 1, Fig 4, Fig 5, Fig 7 | ✅ figs done; 🟡 writing |
+| 4.4 | Drop-one ablation | ~0.5 | Removing E from `TA_P_E` costs less than removing TA (clinches C2) | **A1** | Haoran | Table 3, Fig 9 | ❌ A1 + writing |
+| 4.5 | Frozen-LM controls | ~0.5 | Isolates fine-tune contribution from LM-encoder contribution — supports C3 | **E3 + A5** | George | Table 2 extra rows + Fig 13 | ❌ E3+A5 + writing |
+| 4.6 | Low-label regime | ~0.5 | TAPE's lift over `ogb` grows as labels shrink (or doesn't) — practical takeaway | **A6** | Yiwen | Table 5, Fig 14 | ❌ A6 + writing |
+| 4.7 *(optional)* | Top-k for `P` | ~0.25 | `P` ablation is robust to k ∈ {1, 3, 5} — secondary | **A2** | Yiwen | Table 4 | ❌ A2 + writing |
+| 5 | Discussion | ~1.5 | Why TA wins on Goodreads (§5.1); why graph adds little (§5.2 — C4); practitioner takeaways (§5.3) | synthesis of §4 | all | qualitative spot-check + lift table | ❌ writing |
+| 6 | Limitations | ~0.5 | One dataset, one LLM, fp32, no RevGAT, n=4 seeds | — | all | — | ❌ writing |
+| 7 | Conclusion | ~0.25 | Restate C1/C2/C3; future work (Amazon-Books, Reddit-TAG) | — | all | — | ❌ writing |
+| 8 | Author contributions | ~0.1 | Per-person breakdown (course requirement) | — | all | — | ❌ writing |
+
+**Owner = both runs the experiment AND drafts that section's prose.** Other authors review and polish.
 
 **Total: ~8 pages body** (4.5 fits if we tighten elsewhere; otherwise drop 4.5).
 
