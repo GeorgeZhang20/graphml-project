@@ -49,7 +49,7 @@ class DGLGNNTrainer():
         self.num_classes = num_classes
 
         # ! Init gnn feature
-        topk = 3 if self.dataset_name == 'pubmed' else 5
+        topk = cfg.gnn.train.topk
         if self.feature_type == 'ogb':
             print("Loading OGB features...")
             features = data.ndata['feat']
@@ -112,7 +112,12 @@ class DGLGNNTrainer():
                                for p in self.model.parameters() if p.requires_grad)
 
         print(f"\nNumber of parameters: {trainable_params}")
-        self.ckpt = f"output/{self.dataset_name}/{self.gnn_model_name}.pt"
+        if self.feature_type == "P":
+            ckpt_name = f"{self.gnn_model_name}_{self.feature_type}_k{topk}_seed{self.seed}.pt"
+        else:
+            ckpt_name = f"{self.gnn_model_name}_{self.feature_type}_seed{self.seed}.pt"
+        self.ckpt = f"output/{self.dataset_name}/{ckpt_name}"
+
         self.stopper = EarlyStopping(
             patience=cfg.gnn.train.early_stop, path=self.ckpt) if cfg.gnn.train.early_stop > 0 else None
         self.loss_func = torch.nn.CrossEntropyLoss(reduction='mean')

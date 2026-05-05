@@ -21,7 +21,15 @@ def get_raw_text_arxiv(use_text=False, seed=0):
     data.val_mask = val_mask
     data.test_mask = test_mask
 
-    data.edge_index = data.adj_t.to_symmetric()
+    adj_t = data.adj_t
+    if hasattr(adj_t, "to_symmetric"):  # old torch_sparse.SparseTensor path
+        data.edge_index = adj_t.to_symmetric()
+    else:  # new PyTorch sparse tensor path
+        ei = adj_t.to_sparse_coo().coalesce().indices()
+        rev = ei[[1, 0], :]
+        data.edge_index = torch.cat([ei, rev], dim=1)
+        data.edge_index = torch.unique(data.edge_index.t(), dim=0).t().contiguous()
+
     if not use_text:
         return data, None
 

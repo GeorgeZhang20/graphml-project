@@ -11,7 +11,7 @@ def set_cfg(cfg):
     # Dataset name
     cfg.dataset = 'cora'
     # Cuda device number, used for machine with multiple gpus
-    cfg.device = 0
+    cfg.device = 'cpu'
     # Whether fix the running seed to remove randomness
     cfg.seed = None
     # Number of runs with random init
@@ -48,6 +48,9 @@ def set_cfg(cfg):
     cfg.gnn.train.wd = 0.0
     # Dropout rate
     cfg.gnn.train.dropout = 0.0
+    #topk prediction features to use, only applicable when feature_type is P or TA_P_E
+    cfg.gnn.train.topk = 1
+    cfg.gnn.train.train_frac = 1.0
 
     # ------------------------------------------------------------------------ #
     # LM Model options

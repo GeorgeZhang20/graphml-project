@@ -24,6 +24,10 @@ class GNNTrainer():
         self.lr = cfg.gnn.train.lr
         self.feature_type = feature_type
         self.epochs = cfg.gnn.train.epochs
+        # Fraction of original train_mask to keep for low-label ablations.
+        # Falls back to full-train if the key is absent.
+        self.train_frac = float(getattr(cfg.gnn.train, 'train_frac', 1.0))
+
 
         # ! Load data
         data, num_classes = load_data(
@@ -34,7 +38,7 @@ class GNNTrainer():
         data.y = data.y.squeeze()
 
         # ! Init gnn feature
-        topk = 3 if self.dataset_name == 'pubmed' else 5
+        topk = cfg.gnn.train.topk
         if self.feature_type == 'ogb':
             print("Loading OGB features...")
             features = data.x
@@ -67,6 +71,20 @@ class GNNTrainer():
 
         self.features = features.to(self.device)
         self.data = data.to(self.device)
+        self.train_mask = self.data.train_mask.clone()
+
+        # Optional low-label regime: sub-sample train nodes only; keep val/test fixed.
+        if self.train_frac < 1.0:
+            train_idx = self.data.train_mask.nonzero(as_tuple=False).view(-1)
+            n_train = int(train_idx.numel())
+            keep_n = max(1, int(n_train * self.train_frac))
+            seed = 0 if self.seed is None else int(self.seed)
+            g = torch.Generator(device=train_idx.device)
+            g.manual_seed(seed)
+            perm = torch.randperm(n_train, generator=g, device=train_idx.device)
+            keep_idx = train_idx[perm[:keep_n]]
+            self.train_mask = torch.zeros_like(self.data.train_mask)
+            self.train_mask[keep_idx] = True
 
         # ! Trainer init
         use_pred = self.feature_type == 'P'
@@ -95,7 +113,12 @@ class GNNTrainer():
                                for p in self.model.parameters() if p.requires_grad)
 
         print(f"\nNumber of parameters: {trainable_params}")
-        self.ckpt = f"output/{self.dataset_name}/{self.gnn_model_name}.pt"
+        frac_tag = str(self.train_frac).replace('.', 'p')
+        if self.feature_type == "P":
+            ckpt_name = f"{self.gnn_model_name}_{self.feature_type}_k{topk}_frac{frac_tag}_seed{self.seed}.pt"
+        else:
+            ckpt_name = f"{self.gnn_model_name}_{self.feature_type}_frac{frac_tag}_seed{self.seed}.pt"
+        self.ckpt = f"output/{self.dataset_name}/{ckpt_name}"
         self.stopper = EarlyStopping(
             patience=cfg.gnn.train.early_stop, path=self.ckpt) if cfg.gnn.train.early_stop > 0 else None
         self.loss_func = torch.nn.CrossEntropyLoss()
@@ -118,9 +141,9 @@ class GNNTrainer():
         # ! Specific
         logits = self._forward(self.features, self.data.edge_index)
         loss = self.loss_func(
-            logits[self.data.train_mask], self.data.y[self.data.train_mask])
+            logits[self.train_mask], self.data.y[self.train_mask])
         train_acc = self.evaluator(
-            logits[self.data.train_mask], self.data.y[self.data.train_mask])
+            logits[self.train_mask], self.data.y[self.train_mask])
         loss.backward()
         self.optimizer.step()
 
