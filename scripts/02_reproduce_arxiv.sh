@@ -1,25 +1,50 @@
 #!/usr/bin/env bash
-# Reproduce TAPE on ogbn-arxiv using the upstream GPT-3.5 cached responses
-# and pre-trained checkpoints (download manually first - see TAPE/UPSTREAM_README.md).
+# Replicate TAPE on ogbn-arxiv (validation anchor for the rest of the pipeline).
+# 4 seeds x 4 backbones (MLP, GCN, SAGE, RevGAT) using the upstream cached
+# gpt_responses + the upstream LM trainer.
 #
-# Prereqs:
-#   1. Download dataset/ogbn_arxiv_orig (titleabs.tsv) into TAPE/dataset/ogbn_arxiv_orig/
-#   2. Download gpt_responses/ogbn-arxiv into TAPE/gpt_responses/ogbn-arxiv/
-#   3. (Optional) Download TAPE author checkpoints to skip LM fine-tune.
+# Prerequisites (one-time, manual; see TAPE/UPSTREAM_README.md sec. 1 for the
+# canonical download links):
+#   1. TAPE/dataset/ogbn_arxiv_orig/titleabs.tsv  -- raw text
+#   2. TAPE/gpt_responses/ogbn-arxiv/*.json       -- GPT-3.5 explanations
 #
-# Recommended runtime: Colab T4 ~3-4 hours end-to-end, or CPU for GNN-only path.
+# Wall-clock budget: ~3-4 h on a single A100 (most of it is the 2 LM fine-tunes
+# x 4 seeds). Each GNN cell is ~1 min once the .emb files exist.
 set -euo pipefail
-cd TAPE
+cd "$(dirname "$0")/.."
+
+GNN_ONLY=0
+if [[ "${1:-}" == "--gnn-only" ]]; then
+    GNN_ONLY=1
+fi
+
+DATASET=ogbn-arxiv
+SEEDS=(0 1 2 3)
+GNNS=(MLP GCN SAGE RevGAT)
 
 export WANDB_DISABLED=True
 export TOKENIZERS_PARALLELISM=False
 
-# 1) Fine-tune LM on raw title+abstract
-python -m core.trainLM dataset ogbn-arxiv seed 0
+if [[ "${GNN_ONLY}" -eq 0 ]]; then
+    for SEED in "${SEEDS[@]}"; do
+        # TA: fine-tune DeBERTa on raw title+abstract
+        (cd TAPE && python -m core.trainLM dataset "${DATASET}" seed "${SEED}")
+        # E:  fine-tune DeBERTa on the LLM explanation text
+        (cd TAPE && python -m core.trainLM dataset "${DATASET}" seed "${SEED}" lm.train.use_gpt True)
+    done
+fi
 
-# 2) Fine-tune LM on GPT explanations
-python -m core.trainLM dataset ogbn-arxiv seed 0 lm.train.use_gpt True
-
-# 3) Train GNN ensemble using TA + P + E features (the headline TAPE config)
-python -m core.trainEnsemble dataset ogbn-arxiv gnn.model.name GCN \
-    gnn.train.feature_type TA_P_E
+for GNN in "${GNNS[@]}"; do
+    EXTRA_ARGS=()
+    if [[ "${GNN}" == "RevGAT" ]]; then
+        # The hyperparameters TAPE upstream uses for RevGAT.
+        EXTRA_ARGS=(--extra gnn.train.lr 0.002 gnn.train.dropout 0.5)
+    fi
+    for SEED in "${SEEDS[@]}"; do
+        # TA_P_E ensemble: trains TA-GNN + P-GNN + E-GNN, averages logits.
+        # The wrapper drops a JSON record at results/runs/<dataset>/seed_<S>/.
+        python scripts/_run_gnn_cell.py \
+            --dataset "${DATASET}" --seed "${SEED}" \
+            --gnn "${GNN}" --feature TA_P_E "${EXTRA_ARGS[@]}"
+    done
+done
