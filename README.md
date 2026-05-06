@@ -1,64 +1,109 @@
-# GraphML Spring 2026 Final Project — TAPE on a New Text-Attributed Graph
+# router_nips
 
-We extend [TAPE (He et al., ICLR 2024)](https://arxiv.org/abs/2305.19523) — an
-LLM-as-feature-enhancer for text-attributed graphs — beyond the four
-paper-citation datasets it was originally evaluated on, and run a controlled
-study of where the "explanations-as-features" idea actually helps.
+NeurIPS-deadline fork of `How2TrainARouter`. See `PIPELINE_NOTES.md` for hard-won
+gotchas about the pipeline; **read it before running anything**.
 
-This is a fork of the upstream TAPE code, organized for our experiments.
+## Quick start (fresh machine)
 
-## Repository layout
-```
-graphml-project/
-├── TAPE/                    # upstream code (mostly untouched; UPSTREAM_README.md preserved)
-│   ├── core/                # models + trainers (LM, GNN, ensemble)
-│   ├── dataset/             # raw data, gitignored
-│   ├── gpt_preds/           # small cached top-k LLM label preds (kept)
-│   └── gpt_responses/       # large per-node LLM JSONs, gitignored
-├── new_dataset/             # our extension: build a new TAG
-│   ├── prep/                # build_<DATASET>.py scripts
-│   └── data/                # outputs, gitignored
-├── llm_explanations/        # generate per-node LLM explanations for new TAG
-│   ├── prompts/
-│   ├── responses/           # gitignored
-│   └── generate.py
-├── scripts/                 # reproducible run wrappers
-├── configs/                 # custom YACS overrides
-├── notebooks/               # exploration + plotting
-├── results/                 # logs + metrics, gitignored
-├── docs/
-├── requirements.txt
-├── Plan.md                  # <-- READ THIS
-└── README.md
-```
-
-## Quickstart
 ```bash
-# 1. set up env (creates conda env tape-proj, ~5 min)
-bash scripts/00_setup_env.sh
-conda activate tape-proj
+# 1. install uv if needed: https://docs.astral.sh/uv/
+# 2. set up env, datasets symlink, and smoke-test imports
+bash scripts/setup_env.sh --with-datasets-symlink /path/to/shared/datasets
 
-# 2. confirm pipeline works on Cora (~3 sec)
-bash scripts/01_smoke_test.sh
+# 3. regression test (must pass before you trust this fork)
+bash scripts/regression_test.sh 0   # GPU index, default 0
+# expected: PASS, test_routing_accuracy = 0.6903 ± 0.001
 ```
 
-After that, follow `Plan.md` phase by phase.
+## Repo layout
 
-## Hardware
-- Local Mac (Intel, 16 GB, no CUDA): fine for GNN training on Cora / ogbn-arxiv-sized data.
-- **Colab T4 / Kaggle GPU is required** for DeBERTa fine-tuning and for any
-  Llama-based explanation generation.
-
-## Citing the work we build on
-```bibtex
-@inproceedings{he2024harnessing,
-  title={Harnessing Explanations: LLM-to-LM Interpreter for Enhanced
-         Text-Attributed Graph Representation Learning},
-  author={He, Xiaoxin and Bresson, Xavier and Laurent, Thomas and
-          Perold, Adam and LeCun, Yann and Hooi, Bryan},
-  booktitle={ICLR},
-  year={2024}
-}
+```
+router_nips/
+├── main.py, main_util.py, trainer.py, evaluator.py    # core pipeline (preserved)
+├── models/                                            # all router models (used + legacy)
+├── data_processors/                                   # NB30k, NB270k, RouterBench, etc.
+├── losses/                                            # BCE in trainer + PW (ranking_loss.py)
+├── gating/                                            # required by some model imports
+├── configs/
+│   ├── training_config/                               # 3 canonical configs
+│   ├── pipeline_config/                               # populated per-experiment
+│   └── _legacy/                                       # don't use
+├── scripts/
+│   ├── dispatch.py                                    # clean job dispatcher (replaces gpu_chaser)
+│   ├── aggregate_results.py                           # sweep_summary → CSV
+│   ├── regression_test.sh                             # pipeline correctness check
+│   ├── setup_env.sh                                   # fresh-machine setup
+│   ├── sync_to_remote.sh                              # rsync to datalab2/Anvil
+│   └── legacy/                                        # archived analysis scripts
+├── PIPELINE_NOTES.md                                  # READ THIS FIRST
+└── README.md (this file)
 ```
 
-License of upstream TAPE code: see `TAPE/LICENSE`.
+## Universal env vars (ALWAYS set when launching)
+
+```bash
+export TIER_AWARE_POOLING=1     # CLS for T2, last-token for T3, native for T1
+export L2_NORM_INPUT=1          # L2-norm at MLP input (prevents BCE overflow)
+export OPENBLAS_NUM_THREADS=8   # required for kmeans/knn (sklearn loky)
+export MKL_NUM_THREADS=8
+export OMP_NUM_THREADS=8
+```
+
+The dispatcher (`scripts/dispatch.py`) sets these by default.
+
+## Running an experiment
+
+1. **Build configs** for each cell (one config per (method, encoder, lr, seed) combo).
+   Place in `configs/pipeline_config/nips/<exp_name>/`.
+
+2. **Build a manifest** JSON listing all cells:
+   ```json
+   [
+     {
+       "log_tag": "nb30k_kmeans_modernbert_b_lr1e-3_seed42",
+       "pipeline": "configs/pipeline_config/nips/c1/nb30k_kmeans_mb_lr1e-3_s42.json",
+       "training": "configs/training_config/softmax_bce_dft_fast.json"
+     },
+     ...
+   ]
+   ```
+
+3. **Dispatch:**
+   ```bash
+   python scripts/dispatch.py \
+       --manifest exp_planning_claude/nips_paper/manifests/c1_main.json \
+       --log-dir logs/c1_main
+   ```
+
+4. **Aggregate** when done:
+   ```bash
+   python scripts/aggregate_results.py \
+       --since 2026-04-23 \
+       --best-routing-only \
+       --out exp_planning_claude/nips_paper/results/c1_main.csv
+   ```
+
+## Sync to remote machines
+
+```bash
+# datalab2 (main portal)
+bash scripts/sync_to_remote.sh ubuntu@datalab2.example.com:/home/ubuntu/router_nips
+
+# Anvil (H100, for FT)
+bash scripts/sync_to_remote.sh x-ylu27@anvil.rcac.purdue.edu:/anvil/scratch/.../router_nips
+```
+
+`sync_to_remote.sh` excludes `.venv`, `outputs`, `logs`, `datasets`, `.git`, etc.
+**It does NOT use `--delete`** (per the rsync_delete gotcha in user memory).
+
+After sync, run `bash scripts/setup_env.sh` on the remote.
+
+## Methods that work and have been verified
+
+- `mlp_cost_normalized` — ✅ regression-tested
+- `mirt`, `knn`, `kmeans`, `equirouter` — ✅ run in overnight sweep
+- `encoder_mlp_combined` — ✅ FT path (used in Phase 1A)
+- Other methods import OK but are not on the planned matrix.
+
+For methods being added (RouterDC parity, GraphRouter, HybridLLM, RouteLLM-MF,
+CARROT, ELO), see `exp_planning_claude/nips_paper/tasks/methods_to_integrate.md`.

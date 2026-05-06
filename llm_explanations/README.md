@@ -18,13 +18,17 @@ explain its reasoning, and writes the results in the format TAPE expects.
 | Llama-3-8B    | free              | medium  | run on Colab T4 via `transformers`   |
 | Llama-3-70B   | free if local     | high    | needs serious compute                |
 
-Decide in Phase 2 of `Plan.md`. Default plan: GPT-4o-mini (cost is acceptable).
+We use GPT-4o-mini for the runs reported in the paper (cost was acceptable; ~$15 on the full 76k-node run). The `--model` flag accepts any chat-completion-compatible name, so swapping in a local Llama is a one-line change once the OPENAI_BASE_URL/HF integration is wired up on your end.
 
-## How to run (once `generate.py` is filled in)
+## How to run
 ```bash
+export OPENAI_API_KEY=sk-...
 python llm_explanations/generate.py \
     --dataset goodreads_children \
     --node_texts new_dataset/data/goodreads_children/node_texts.jsonl \
     --labels    new_dataset/data/goodreads_children/labels.txt \
     --model     gpt-4o-mini
 ```
+
+`generate.py` is resumable: re-running it skips nodes whose JSON already lives
+under `TAPE/gpt_responses/<DATASET>/`, so interrupting and re-running is safe.

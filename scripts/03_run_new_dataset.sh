@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Apply the TAPE pipeline to OUR new dataset.
-# Fill in DATASET once we lock the choice in Plan.md (Phase 2).
+# Apply the TAPE pipeline to a new dataset (we use goodreads_children).
 #
 # Workflow:
 #   1) new_dataset/prep/build_<DATASET>.py  -> produces TAPE-compatible files

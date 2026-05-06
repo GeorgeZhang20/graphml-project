@@ -1,14 +1,15 @@
 # New Dataset
 
 We apply TAPE to a Text-Attributed Graph (TAG) that the original paper did
-**not** evaluate. Final dataset to be locked in Phase 1 of `Plan.md`.
+**not** evaluate. We use **Goodreads-Children** from CS-TAG as our cross-domain
+probe; build script is at `prep/build_goodreads_children.py`.
 
-## Candidate shortlist
-| Name                 | Nodes  | Source                                                       | Why we'd pick it |
-|----------------------|--------|--------------------------------------------------------------|------------------|
-| Goodreads-Children   | ~76k   | [CS-TAG](https://github.com/sktsherlock/TAG-Benchmark)       | Clear text + book genre labels; not papers |
-| Amazon-Books         | ~36k   | CS-TAG                                                       | Smaller, faster turnaround |
-| Reddit (TAG version) | ~33k   | [GLBench](https://github.com/NineAbyss/GLBench/tree/main/datasets) | Different domain (forum posts) |
+## Other TAGs the build pattern can be reused for
+| Name                 | Nodes  | Source                                                       | Why this one |
+|----------------------|--------|--------------------------------------------------------------|--------------|
+| Goodreads-Children   | ~76k   | [CS-TAG](https://github.com/sktsherlock/TAG-Benchmark)       | the one we run |
+| Amazon-Books         | ~36k   | CS-TAG                                                       | smaller, faster turnaround |
+| Reddit (TAG version) | ~33k   | [GLBench](https://github.com/NineAbyss/GLBench/tree/main/datasets) | different domain (forum posts) |
 
 ## Files we must produce
 For each chosen dataset, `new_dataset/data/<DATASET>/` should contain:
